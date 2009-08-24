@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 
-# TODO  - Require msg
-# 	- Add resp keyword
 # Copyright (C) 2009 Leon Ward
 
 # This program is free software; you can redistribute it and/or
@@ -19,6 +17,10 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 # Contact: leon.ward@sourcefire.com
+# 
+# TODO  - Require msg
+# 	- Add resp keyword
+#	- Check for normalized data in content buffers where available (uri modifiers and uricontent)
 
 use strict;
 use warnings;
@@ -33,7 +35,7 @@ my $rulefile=0;
 my $blacklist=0;
 my $verbose=0;
 my $level=3;
-my $version=0.7;
+my $version=0.8;
 my $censor=0;
 my $pause=0;
 my $write=0;
@@ -221,8 +223,12 @@ while (my $line=<RULEFILE>) {
 	$linenum++;
 
 	if ($fixnormbug ) {
-		# Remove extra whitespace before parsing the rule line
-		$line =~ s/\s+/ /g;
+		# There is a minor bug in the Parse::Snort module with whitespace, while waiting for a fix (reported)
+		# lets "fix" it here. 
+		# Thanks to Tom for spotting it.
+
+		$line =~ s/\s+/ /g;	# Normalize whitespace 
+		$line =~ s/ $//g;	# Remove end of line whitespace 
 	}
 
 	if ($comment) {
