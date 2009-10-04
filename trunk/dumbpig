@@ -266,7 +266,7 @@ while (my $line=<RULEFILE>) {
 		############################################################
 		# If any of these are 0 post processing, the keyword is not in use.
 		my @censorKeywords=("pcre","content","uricontent","msg");
-		my @argless=("http_method", "ftpbounce","nocase","rawbytes","dce_stub_data","http_header","fast_pattern","http_client_body");	# Some keywords don't take args, these are argless.
+		my @argless=("http_method", "ftpbounce","nocase","rawbytes","dce_stub_data","http_header","fast_pattern","http_client_body", "http_cookie");	# Some keywords don't take args, these are argless.
 		my %hkeywords =("msg" => 0,
 				"content" => 0,
 				"gid" => 0,
@@ -309,6 +309,7 @@ while (my $line=<RULEFILE>) {
 				"fwsam" => 0,
 				"asn1" => 0,
 				"http_client_body" => 0,
+				"http_cookie" => 0,
 				"dce_stub_data" => 0,
 				"dce_iface" => 0,
 				"dce_opnum" => 0,
@@ -527,7 +528,8 @@ while (my $line=<RULEFILE>) {
 			}
 
 			# No deep packet checks - Firewall suited check
-			if  ( ("$proto" eq "tcp" or "$proto" eq "udp") and not ($hkeywords{'content'} or $hkeywords{'uricontent'} or $hkeywords{'pcre'} or $hkeywords{'byte_test'} or $hkeywords{'dsize'}) ) {
+			if  ( ("$proto" eq "tcp" or "$proto" eq "udp") and not 
+				($hkeywords{'content'} or $hkeywords{'uricontent'} or $hkeywords{'pcre'} or $hkeywords{'byte_test'} or $hkeywords{'dsize'} or $hkeywords{'flags'}) ) {
 				$fail++;
 				$blacklistable=1;
 				push (@reason, "- TCP/UDP rule with no deep packet checks? This rule looks more suited to a firewall or blacklist\n"); 
