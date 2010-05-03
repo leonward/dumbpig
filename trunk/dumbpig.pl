@@ -44,6 +44,7 @@ my $forcefail=0;
 my $q=0;
 my $fixnormbug=1; 	# I found a bug in Parse::Snort with whitespace normalization, 
 			# this is a quick fix while waiting for patch upstream
+		
 
 sub getLatestVersion {
 	# Check for latest version of dumbpig
@@ -214,21 +215,27 @@ open RULEFILE, "$rulefile" or  die "Unable to open $rulefile";
 open OUTPUT,">","$write" or die "Unable to open output file $write";
 
 my $linenum=0;
+my $rulecount=0;
 my $failnum=0;
 my $blackCIDR="";
 my @blackArray=();
 
 while (my $line=<RULEFILE>) {
 	chomp $line;
+	my $originalline = $line;
 	$linenum++;
 
 	if ($fixnormbug ) {
-		# There is a minor bug in the Parse::Snort module with whitespace, while waiting for a fix (reported)
-		# lets "fix" it here. 
-		# Thanks to Tom for spotting it.
+		# There is a minor bug in the Parse::Snort module with whitespace, while waiting for a fix (reported) lets "fix" it here.
 
-		$line =~ s/\s+/ /g;	# Normalize whitespace 
-		$line =~ s/ $//g;	# Remove end of line whitespace 
+		# Thanks to Tom Dixon for spotting the problem.
+		# Thanks to Per Kristian Johnsen for pointing out that I was breaking peoples rules by writing this output to file.
+
+#		$line =~ s/ *$//g;	# Remove end of line whitespace 
+		$line =~ s/: *"/:"/g;	# Remove extra space after : eg. msg:  "foo";
+		$line =~ s/^\s+(alert|drop|pass|reject|activate|dynamic|activate)/$1/g; # Remove ws before action keyword e.g. ^     alert ip any	
+		$line =~ s/\s+/ /g;	# Normalize All whitespace <- This is brutal and breakes the formatted output
+
 	}
 
 	if ($comment) {
@@ -240,6 +247,7 @@ while (my $line=<RULEFILE>) {
 	}
 
 	if ( $line =~ m/^alert|^pass|^drop|^reject|^activate|^dynamic/ ) {
+		$rulecount++;
 		my $rulehash=Parse::Snort->new($line);
 		if ($verbose) {
 			print "-V Dumping rule hash from Parse::Snort\n";
@@ -266,7 +274,20 @@ while (my $line=<RULEFILE>) {
 		############################################################
 		# If any of these are 0 post processing, the keyword is not in use.
 		my @censorKeywords=("pcre","content","uricontent","msg");
-		my @argless=("http_method", "ftpbounce","nocase","rawbytes","dce_stub_data","http_header","fast_pattern","http_client_body", "http_cookie");	# Some keywords don't take args, these are argless.
+		my @argless=("http_method", 
+				"ftpbounce",
+				"file_data",
+				"nocase",
+				"rawbytes",
+				"dce_stub_data",
+				"http_header",
+				"fast_pattern",
+				"http_client_body", 
+				"http_stat_code",
+				"http_stat_msg",
+				"http_cookie");	# Some keywords don't take args, these are argless.
+
+
 		my %hkeywords =("msg" => 0,
 				"content" => 0,
 				"gid" => 0,
@@ -319,7 +340,11 @@ while (my $line=<RULEFILE>) {
 				"fast_pattern" => 0,
 				"http_method" => 0,
 				"ftpbounce" => 0,
-				"http_header" => 0
+				"http_header" => 0,
+				"http_stat_code" => 0,
+				"http_stat_msg" => 0,
+				"detection_filter" => 0,
+				"file_data" => 0
 				);
 
 		if ($verbose) {
@@ -605,7 +630,8 @@ while (my $line=<RULEFILE>) {
 					print "$_";
 				}
 				unless ($censor ) {
-					print "$line\n\n";
+					print "\nRule source sid: $hkeywords{'sid'} \n";
+					print "$originalline\n";
 				}
 				print "=============================================================================\n";
 				if ($pause) {
@@ -615,7 +641,7 @@ while (my $line=<RULEFILE>) {
 				}
 			}
 		} else { # WIN!
-			print OUTPUT "$line\n";	
+			print OUTPUT "$originalline\n";	
 		}
 	} 
 }
@@ -636,5 +662,5 @@ if ($blacklist) {
 }
 
 print "--------------------------------------\n";
-print "Total: $failnum fails over $linenum lines in $rulefile\n";
+print "Total: $failnum fails over $rulecount rules ($linenum lines) in $rulefile\n";
 print "- Contact leon.ward\@sourcefire.com\n";
