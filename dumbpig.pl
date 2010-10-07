@@ -1,22 +1,23 @@
 #!/usr/bin/perl
 
-# Copyright (C) 2009 Leon Ward
-
+###################################################
+# Copyright (C) 2010 Leon Ward
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
-# Contact: leon.ward@sourcefire.com
+#
+# Contact: leon@rm-rf.co.uk
 # 
 # TODO  - Require msg
 # 	- Add resp keyword
@@ -24,42 +25,31 @@
 
 use strict;
 use warnings;
-
+use Getopt::Long;
 use Parse::Snort;
 use Data::Dumper;
-use LWP::Simple;
 
 # Nothing to configure - Check out usage()
 # ----------------------------------------------
 my $rulefile=0;
 my $blacklist=0;
 my $verbose=0;
-my $level=3;
-my $version=0.9;
+my $level=4;
+my $version=0.10;
 my $censor=0;
 my $pause=0;
 my $write=0;
 my $comment=0;
 my $forcefail=0;
 my $q=0;
+my $linenum=0;
+my $rulecount=0;
+my $failnum=0;
+my $blackCIDR="";
+my @blackArray=();
 my $fixnormbug=1; 	# I found a bug in Parse::Snort with whitespace normalization, 
 			# this is a quick fix while waiting for patch upstream
 		
-
-sub getLatestVersion {
-	# Check for latest version of dumbpig
-	(my $latestVer ,my $url)=(split / /,(get("http://rm-rf.co.uk/downloads/dumbpiglatest.txt")));
-	if ($version < $latestVer) {
-		print "* NEW VERSION AVAILABLE - $latestVer\n";
-		print "* Download here -> $url\n";
-		exit 1;
-	} else {
-		print "No update found\n";
-		exit 0;
-	}	
-}
-
-
 sub convert_bl{
 	# Convert a load of snort rule header format IPs (or CIDR) to the format used by the blacklist patch
 	# Note that the BL pacth isn't stable yet, and formats my change etc etc . Use at your own risk
@@ -75,7 +65,7 @@ sub convert_bl{
 		# 3) Add a /32 to each bare IP for blacklist
 		unless ( "$_" =~ m/.*\/[0-9]/) { 
 			$iplist=$iplist . "$_/32 ";
-		} else { 	# We must alreasy have a cIDR then, dont add a /32
+		} else { 	# We must already have a CIDR then, dont add a /32
 			$iplist=$iplist . "$_ ";
 		}
 	}
@@ -99,6 +89,7 @@ sub chk_ip{
 }
 
 sub chk_pt{
+	# Provide a value, and get back num,var, or any.
 	my $port=shift;
 
 	if ( "$port" eq "any") {
@@ -118,107 +109,57 @@ sub usage{
 
 	print "Error : $err\n";
 	print "Usage dumbPig <args> \n";
-	print "		-u or --update		Check for updates\n";
-	print "		-r or --rulefile  	<rulefile>\n";
-	print "		-s or --sensitivity 	<1-4> Sensitivity level, Higher the number, the higher the pass-grade\n";
-	print "		-b or --blacklist 	Enable blacklist output (see Marty's Blog post for details)\n";
-	print "		-p or --pause		Pause for ENTER after each FAIL\n";
-	print "		-w or --write		Filename to wite CLEAN rules to\n";
-	print "		-q or --quiet		Suppress FAIL, only provide summary\n";
-	print "		-d or --disabled	Check rules that are disabled i.e commented out #alert # alert etc\n";
-	print "		-v or --verbose		Verbose output for debugging\n";
-	print "		-c or --censor		Censor rules in the output, in case you dont trust everyone\n";
-	print "		-f or --forcefail	Force good rules to FAIL. Allows output of all rules\n";
+	print "	    -r or --rulefile  	<rulefile>\n";
+	print "	    -s or --sensitivity <1-4> Sensitivity level, Higher the number, the higher the pass-grade\n";
+	print "	    -b or --blacklist 	Enable blacklist output (see Marty's Blog post for details)\n";
+	print "	    -p or --pause	Pause for ENTER after each FAIL\n";
+	print "	    -w or --write	Filename to wite CLEAN rules to\n";
+	print "	    -q or --quiet	Suppress FAIL, only provide summary\n";
+	print "	    -d or --disabled	Check rules that are disabled i.e commented out #alert # alert etc\n";
+	print "	    -v or --verbose	Verbose output for debugging\n";
+	print "	    -c or --censor	Censor rules in the output, in case you dont trust everyone\n";
+	print "	    -f or --forcefail	Force good rules to FAIL. Allows output of all rules\n";
 	exit 1;
 }
 
-my $argcount=1;
-foreach (@ARGV) {
-        if (("$_" eq "-b") || ("$_" eq "--blacklist")) {
-		$blacklist=$ARGV[$argcount];
-	} elsif (( "$_" eq "-s" ) || ("$_" eq "--sensivity")) {
-		$level=$ARGV[$argcount];
-	} elsif (( "$_" eq "-r" ) || ("$_" eq "--rulefile")) {
-		$rulefile=$ARGV[$argcount];
-	} elsif (( "$_" eq "-w" ) || ("$_" eq "--write")) {
-		$write=$ARGV[$argcount];
-	} elsif (( "$_" eq "-p" ) || ("$_" eq "--pause")) {
-		$pause=1;
-	} elsif (( "$_" eq "-v" ) || ("$_" eq "--verbose")) {
-		$verbose=1;
-	} elsif (( "$_" eq "-d" ) || ("$_" eq "--disabled")) {
-		$comment=1;
-	} elsif (( "$_" eq "-f" ) || ("$_" eq "--forcefail")) {
-		$forcefail=1;
-	} elsif (( "$_" eq "-c" ) || ("$_" eq "--censor")) {
-		$censor=1;
-	} elsif (( "$_" eq "-q" ) || ("$_" eq "--quite")) {
-		$q=1;
-	} elsif (( "$_" eq "-u" ) || ("$_" eq "--update")) {
-		&getLatestVersion;	
-	}
-	$argcount++;
-}
+GetOptions (    'b|blacklist=s' => \$blacklist,
+		's|sensitivity=s' => \$level,
+		'r|rulefile=s' => \$rulefile,
+		'w|write=s' => \$write,
+		'p|pause' => \$pause,
+		'v|verbose' => \$verbose,
+		'd|disabled' => \$comment,
+		'f|forcefail' => \$forcefail,
+		'c|censor' => \$censor,
+		'q|quiet' => \$q,
+);
 
 unless ( $q ) {
 	print "\nDumbPig version $version - leon.ward\@sourcefire.com \n";
-	print "Because I hate looking for the same dumb problems with snort rule-sets\n\n";
-
 	print "  	  __,,    ( Dumb-pig says     )  
 	~(  oo ---( \"ur rulz r not so )
 	  ''''    ( gud akshuly\" *    )   
 	 \n"; # Hey if pulled pork can have a pig, so can I :) -> http://code.google.com/p/pulledpork/ 
 
-	print "Config\n";
-	print "----------------------\n";
-	print "* Sensivity level - $level/3\n";
-	if ($blacklist) {
-		print "* Blacklist output : Enabled";
-	} else { 
-		print "* Blacklist outputi : Disabled\n";
-	}
+	print "DumbPig Configuration\n";
+	print "*********************************************\n";
+	print "* Sensitivity level - $level/4\n";
+	print "* Blacklist output : Enabled" if ($blacklist);
 	print "* Processing File - $rulefile\n";
-	if ($comment) {
-		print "* Check commented out rules : Enabled\n";
-	} else {
-		print "* Check commented out rules : Disabled\n";
-	}
-	if ($pause) {
-		print "* Pause : Enabled\n";
-	} else {
-		print "* Pause : Disbled\n";
-	}
-
-	if ($forcefail) {
-		print "* ForceFail : Enabled\n";
-	} else {
-		print "* ForceFail : Disabled\n";
-	}
-
-	if ($censor) {
-		print "* Censor : Enabled\n";
-	} else {
-		print "* Censor : Disabled\n";
-	}
-
-	if ($write) {
-		print "* Output clean rules to : $write\n";
-	}
-
-	print "* Quite mode : Disabled \n"; 		# We won't see this if it's enabled, so why bother checking?
-	print "----------------------\n";
+	print "* Checking commented out rules in $rulefile\n" if ($comment);
+	print "* Pause after each rule Enabled\n" if ($pause);
+	print "* ForceFail : Enabled\n" if ($forcefail);
+	print "* Censor : Enabled\n" if ($censor);
+	print "* Writing clean rules to : $write\n" if ($write);
+	print "* Quiet mode : Disabled \n"; 		
+	print "*********************************************\n";
 }
 
 
 unless ($rulefile) { usage("Please specify a rules file"); }
-open RULEFILE, "$rulefile" or  die "Unable to open $rulefile";
-open OUTPUT,">","$write" or die "Unable to open output file $write";
+open RULEFILE, "$rulefile" or  die "Unable to open $rulefile\n";
+open OUTPUT,">","$write" or die "Unable to open output file $write\n";
 
-my $linenum=0;
-my $rulecount=0;
-my $failnum=0;
-my $blackCIDR="";
-my @blackArray=();
 
 while (my $line=<RULEFILE>) {
 	chomp $line;
@@ -231,7 +172,7 @@ while (my $line=<RULEFILE>) {
 		# Thanks to Tom Dixon for spotting the problem.
 		# Thanks to Per Kristian Johnsen for pointing out that I was breaking peoples rules by writing this output to file.
 
-#		$line =~ s/ *$//g;	# Remove end of line whitespace 
+		#$line =~ s/ *$//g;	# Remove end of line whitespace 
 		$line =~ s/: *"/:"/g;	# Remove extra space after : eg. msg:  "foo";
 		$line =~ s/^\s+(alert|drop|pass|reject|activate|dynamic|activate)/$1/g; # Remove ws before action keyword e.g. ^     alert ip any	
 		$line =~ s/\s+/ /g;	# Normalize All whitespace <- This is brutal and breakes the formatted output
@@ -240,10 +181,8 @@ while (my $line=<RULEFILE>) {
 
 	if ($comment) {
 		# User wants to process commented out lines, so lets uncomment them
-		$line =~ s/^#alert/alert/g;
-		$line =~ s/^# alert/alert/g;
-		$line =~ s/^#drop/drop/g;
-		$line =~ s/^# drop/drop/g;
+		$line =~ s/^#\s*alert/alert/g;
+		$line =~ s/^#\s*drop/drop/g;
 	}
 
 	if ( $line =~ m/^alert|^pass|^drop|^reject|^activate|^dynamic/ ) {
@@ -280,9 +219,13 @@ while (my $line=<RULEFILE>) {
 				"nocase",
 				"rawbytes",
 				"dce_stub_data",
-				"http_header",
 				"fast_pattern",
 				"http_client_body", 
+				"http_header",
+				"http_raw_cookie",
+				"http_raw_header",
+				"http_method",
+				"http_uri",
 				"http_stat_code",
 				"http_stat_msg",
 				"http_cookie");	# Some keywords don't take args, these are argless.
@@ -340,7 +283,7 @@ while (my $line=<RULEFILE>) {
 				"fast_pattern" => 0,
 				"http_method" => 0,
 				"ftpbounce" => 0,
-				"http_header" => 0,
+				"http_encode" => 0,
 				"http_stat_code" => 0,
 				"http_stat_msg" => 0,
 				"detection_filter" => 0,
@@ -353,17 +296,16 @@ while (my $line=<RULEFILE>) {
 
 		############################################################
 		# Check Rule Header
-
 		# Check action
-		unless ("$rulehash->{'action'}" =~ m/alert|drop|pass/) {
+
+		unless ("$rulehash->{'action'}" =~ m/alert|drop|pass|sdrop|reject|activate|dynamic/) {
 			print "Action is -$rulehash->{'action'}-\n";
-			$fail++;
 			$fail++;
 			push(@reason, "- Only drop and alert actions are supported on rule imports\n");
 		}
 		$action=$rulehash->{'action'};
 
-		$display_head=$display_head . "$action ";
+		$display_head .= "$action ";
 
 		# Check protocol
 		if ( $rulehash->{'proto'} =~ m/tcp|udp|icmp|ip/ ) {
@@ -503,7 +445,7 @@ while (my $line=<RULEFILE>) {
 			$fail++;
 		}
 
-		# Low sensivity = BAD problems
+		# Low sensitivity = BAD problems
 		if ($level >= 1) {   
 
 			# IP rule with a port num (WTF?)
@@ -544,7 +486,7 @@ while (my $line=<RULEFILE>) {
 			}
 		}
 
-		# Medium sensivity level = Medium problems
+		# Medium sensitivity level = Medium problems
 		if ($level > 2 ) { 
 			# IP rule with flow - move to TCP/UDP
 			if ( ("$proto" eq "ip") and $hkeywords{'flow'} ) {
@@ -587,9 +529,9 @@ while (my $line=<RULEFILE>) {
 
 		if ($level >=4) {
 			# Any any any any rule..... SLOW
-			if (("$src_addr" eq "any") and ("$dst_addr" eq "any") and ("$src_port" eq "any") and ("$dst_port" eq "any")) {
+			if (("$src_port" eq "any") and ("$dst_port" eq "any")) {
 				$fail++;
-				push (@reason, "- ANY ANY -> ANY ANY rule. Come on, surely you can do better than that!? \n  If you are importing into a Sourcefire DC, look at metadata service \n");
+				push (@reason, "- <ip.addr> ANY -> <ip.addr> ANY rule. \n  You should really add port numbers into your rule. You are likely wasting huge chunks of processing effort on the wrong packets\n");
 			}
 		}	
 
