@@ -1,0 +1,8 @@
+# Sample set of bad rules.
+# These rules are "bad", so don't copy them
+# Leon Ward
+#
+alert ip any any -> any 53 (msg: "DNS lookup for foo.com using IP proto with port numbers"; content:"baddomain"; sid:1; rev:1)
+alert tcp any any -> any 80 (msg: "fastpattern not"; content:"short1"; content: "short2"; content: "looooooong"; sid:2; rev:1)
+alert tcp any any -> any 80 (msg: "fastpattern set"; content:"short1"; content: "short2"; fast_pattern; content: "looooooong"; sid:3; rev:1)
+alert tcp any any -> any any (msg: "Any any -> any any rule"; content: "stuff"; flow: to_server, established; sid:4; classtype: bad-unknown; rev:1)
