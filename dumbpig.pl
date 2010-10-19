@@ -286,6 +286,9 @@ while (my $line=<RULEFILE>) {
 				"http_encode" => 0,
 				"http_stat_code" => 0,
 				"http_stat_msg" => 0,
+                                "http_uri" => 0,
+                                "ssl_version" => 0,
+                                "ssl_state" => 0,
 				"detection_filter" => 0,
 				"file_data" => 0
 				);
