@@ -166,17 +166,17 @@ while (my $line=<RULEFILE>) {
 	my $originalline = $line;
 	$linenum++;
 
-	if ($fixnormbug ) {
+	if ($fixnormbug) {
 		# There is a minor bug in the Parse::Snort module with whitespace, while waiting for a fix (reported) lets "fix" it here.
-
 		# Thanks to Tom Dixon for spotting the problem.
 		# Thanks to Per Kristian Johnsen for pointing out that I was breaking peoples rules by writing this output to file.
 
-		#$line =~ s/ *$//g;	# Remove end of line whitespace 
 		$line =~ s/: *"/:"/g;	# Remove extra space after : eg. msg:  "foo";
 		$line =~ s/^\s+(alert|drop|pass|reject|activate|dynamic|activate)/$1/g; # Remove ws before action keyword e.g. ^     alert ip any	
 		$line =~ s/\s+/ /g;	# Normalize All whitespace <- This is brutal and breakes the formatted output
-
+		if ($line =~ m/\)\s/) {
+			$line =~ s/\)\s/\)/;
+		} 
 	}
 
 	if ($comment) {
