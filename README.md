@@ -15,12 +15,20 @@ sudo yum install perl-CPAN perl-libwww-perl perl-Class-Accessor
 sudo cpan -i "Parse::Snort"
 ```
 
+On Mac OS with Perlbrew:
+Note, don't mess with your system Perl on OSX, it will bite you. Perlbrew is your friend.
+
+```
+$ cpanm Parse::Snort
+$ ./dumbpig.pl
+```
+
 Usage
 -----
 ```
 $ perl dumbpig.pl
 
-DumbPig version 0.2 - leon.ward@sourcefire.com
+DumbPig version 0.3 - leon@leonward.com
       __,,    ( Dumb-pig says     )
     ~(  oo ---( "ur rulz r not so )
       ''''    ( gud akshuly" *    )
