@@ -135,7 +135,7 @@ GetOptions (    'b|blacklist=s' => \$blacklist,
 );
 
 unless ( $q ) {
-	print "\nDumbPig version $version - leon.ward\@sourcefire.com \n";
+	print "\nDumbPig version $version - leon\@leonward.com \n";
 	print "  	  __,,    ( Dumb-pig says     )
 	~(  oo ---( \"ur rulz r not so )
 	  ''''    ( gud akshuly\" *    )
