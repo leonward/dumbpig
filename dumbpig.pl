@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 # Contact: leon@rm-rf.co.uk
-# 
+#
 # TODO  - Require msg
 # 	- Add resp keyword
 #	- Check for normalized data in content buffers where available (uri modifiers and uricontent)
@@ -47,9 +47,9 @@ my $rulecount=0;
 my $failnum=0;
 my $blackCIDR="";
 my @blackArray=();
-my $fixnormbug=1; 	# I found a bug in Parse::Snort with whitespace normalization, 
+my $fixnormbug=1; 	# I found a bug in Parse::Snort with whitespace normalization,
 			# this is a quick fix while waiting for patch upstream
-		
+
 sub convert_bl{
 	# Convert a load of snort rule header format IPs (or CIDR) to the format used by the blacklist patch
 	# Note that the BL pacth isn't stable yet, and formats my change etc etc . Use at your own risk
@@ -61,9 +61,9 @@ sub convert_bl{
 
 	# 2) Lets convert this var into a space separated list of CIDR blocks for blacklist
 	my @iparray = split(/,/,$ips);
-	foreach (@iparray){ 
+	foreach (@iparray){
 		# 3) Add a /32 to each bare IP for blacklist
-		unless ( "$_" =~ m/.*\/[0-9]/) { 
+		unless ( "$_" =~ m/.*\/[0-9]/) {
 			$iplist=$iplist . "$_/32 ";
 		} else { 	# We must already have a CIDR then, dont add a /32
 			$iplist=$iplist . "$_ ";
@@ -79,7 +79,7 @@ sub chk_ip{
 	if ( "$ip" eq "any") {
 		return("any");
 	} elsif ( "$ip" =~ m/^\$|^\!\$|^\[\$|\!\[\$/) {
-		return("var");	
+		return("var");
 	} elsif ( "$ip" =~ m/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b|\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/) {
 		return("ip");
 	} else {
@@ -95,7 +95,7 @@ sub chk_pt{
 	if ( "$port" eq "any") {
 		return("any");
 	} elsif ( "$port" =~ m/^\$|^\!\$/) {
-		return("var");	
+		return("var");
 	} elsif ( "$port" =~ m/\b\d{1,5}/) {
 		return("num");
 	} else {
@@ -136,10 +136,10 @@ GetOptions (    'b|blacklist=s' => \$blacklist,
 
 unless ( $q ) {
 	print "\nDumbPig version $version - leon.ward\@sourcefire.com \n";
-	print "  	  __,,    ( Dumb-pig says     )  
+	print "  	  __,,    ( Dumb-pig says     )
 	~(  oo ---( \"ur rulz r not so )
-	  ''''    ( gud akshuly\" *    )   
-	 \n"; # Hey if pulled pork can have a pig, so can I :) -> http://code.google.com/p/pulledpork/ 
+	  ''''    ( gud akshuly\" *    )
+	 \n"; # Hey if pulled pork can have a pig, so can I :) -> http://code.google.com/p/pulledpork/
 
 	print "DumbPig Configuration\n";
 	print "*********************************************\n";
@@ -151,7 +151,7 @@ unless ( $q ) {
 	print "* ForceFail : Enabled\n" if ($forcefail);
 	print "* Censor : Enabled\n" if ($censor);
 	print "* Writing clean rules to : $write\n" if ($write);
-	print "* Quiet mode : Disabled \n"; 		
+	print "* Quiet mode : Disabled \n";
 	print "*********************************************\n";
 }
 
@@ -172,11 +172,11 @@ while (my $line=<RULEFILE>) {
 		# Thanks to Per Kristian Johnsen for pointing out that I was breaking peoples rules by writing this output to file.
 
 		$line =~ s/: *"/:"/g;	# Remove extra space after : eg. msg:  "foo";
-		$line =~ s/^\s+(alert|drop|pass|reject|activate|dynamic|activate)/$1/g; # Remove ws before action keyword e.g. ^     alert ip any	
+		$line =~ s/^\s+(alert|drop|pass|reject|activate|dynamic|activate)/$1/g; # Remove ws before action keyword e.g. ^     alert ip any
 		$line =~ s/\s+/ /g;	# Normalize All whitespace <- This is brutal and breakes the formatted output
 		if ($line =~ m/\)\s/) {
 			$line =~ s/\)\s/\)/;
-		} 
+		}
 	}
 
 	if ($comment) {
@@ -199,8 +199,8 @@ while (my $line=<RULEFILE>) {
 		my @reason=();		# Array of reasons for fail
 		my $sfreason="";
 		my $display_head="";
-		my $display_body="";	
-		my $action=0; 
+		my $display_body="";
+		my $action=0;
 		my $proto=0;
 		my $src_addr=0;
 		my $src_port=0;
@@ -213,14 +213,14 @@ while (my $line=<RULEFILE>) {
 		############################################################
 		# If any of these are 0 post processing, the keyword is not in use.
 		my @censorKeywords=("pcre","content","uricontent","msg");
-		my @argless=("http_method", 
+		my @argless=("http_method",
 				"ftpbounce",
 				"file_data",
 				"nocase",
 				"rawbytes",
 				"dce_stub_data",
 				"fast_pattern",
-				"http_client_body", 
+				"http_client_body",
 				"http_header",
 				"http_raw_cookie",
 				"http_raw_header",
@@ -234,8 +234,8 @@ while (my $line=<RULEFILE>) {
 		my %hkeywords =("msg" => 0,
 				"content" => 0,
 				"gid" => 0,
-				"sid" => 0, 
-				"ttl" => 0, 
+				"sid" => 0,
+				"ttl" => 0,
 				"uricontent" => 0,
 				"pcre" => 0,
 				"flow" => 0,
@@ -312,13 +312,13 @@ while (my $line=<RULEFILE>) {
 
 		# Check protocol
 		if ( $rulehash->{'proto'} =~ m/tcp|udp|icmp|ip/ ) {
-			$proto=$rulehash->{'proto'};	
+			$proto=$rulehash->{'proto'};
 		} else {
 			$fail++;
 			push(@reason, "- Invalid Protocol $rulehash->{'proto'}\n");
 		}
 		$display_head=$display_head . "$rulehash->{'proto'} ";
-		
+
 		# Source IP
 		if ( chk_ip("$rulehash->{'src'}") ) {
 			$src_addr=chk_ip("$rulehash->{'src'}");
@@ -379,11 +379,11 @@ while (my $line=<RULEFILE>) {
 		if ($verbose) {
 			print "[v] ---- RULE Head ----\n";
 			print "proto $proto \n";
-			print "src_addr $src_addr ($rulehash->{'src'})\n";	
-			print "src_port $src_port ($rulehash->{'src_port'})\n";	
-			print "direction $direction ($rulehash->{'direction'})\n";	
-			print "dst_addr $dst_addr ($rulehash->{'dst'})\n";	
-			print "dst_port $dst_port ($rulehash->{'dst_port'})\n";	
+			print "src_addr $src_addr ($rulehash->{'src'})\n";
+			print "src_port $src_port ($rulehash->{'src_port'})\n";
+			print "direction $direction ($rulehash->{'direction'})\n";
+			print "dst_addr $dst_addr ($rulehash->{'dst'})\n";
+			print "dst_port $dst_port ($rulehash->{'dst_port'})\n";
 		}
 
 
@@ -400,15 +400,15 @@ while (my $line=<RULEFILE>) {
 	 	foreach ($rulehash->{'opts'}) {
 			foreach my $keyword (@$_){
 				#print "Processing $keyword->[0] \n";
-	
+
 				# Check we support this keyword
-				if (grep {$_ eq $keyword->[0]} %hkeywords) { 
+				if (grep {$_ eq $keyword->[0]} %hkeywords) {
 
 					unless (grep {$_ eq $keyword->[0]} @argless) {  	# Check if this keyword is argless. If so set to 1 to show it's used
 						$hkeywords{$keyword->[0]} = $keyword->[1] ;	# If it takes args, set the value of the keyword in the hash to the arg.
 						if ($censor) {
 							# Censor the value of some keywords, defined in censor_keywords
-							if (grep {$_ eq $keyword->[0]} @censorKeywords) {  	
+							if (grep {$_ eq $keyword->[0]} @censorKeywords) {
 								push (@rulelines, "$keyword->[0]: \"XXXXXXXX\";");
 							} else {
 								push (@rulelines, "$keyword->[0]:$keyword->[1];");
@@ -419,16 +419,16 @@ while (my $line=<RULEFILE>) {
 					} else {
 						$hkeywords{$keyword->[0]} = 1;
 						push (@rulelines, "$keyword->[0];");
-					}	
+					}
 				} else {
 					print "WARNING: $keyword->[0] not supported  on line $linenum of $rulefile\n";
 					$fail++;
 					push (@reason, "- Invalid keyword $keyword->[0] found. \n  Does this tool support the keyword \"$keyword->[0]\" If it should contact me. \n  Have you correctly escaped things that should be escaped?\n  Are you using invalid content chars such as \?\"\& etc that should be represented by their hex values eg content\: \"\|VAL\|\"\;\n");
 
 				}
-			}	
+			}
 
-		}	
+		}
 		if ($verbose) {
 			print "[v] ------------------\n";
 			print "$display_head (\n";
@@ -449,13 +449,13 @@ while (my $line=<RULEFILE>) {
 		}
 
 		# Low sensitivity = BAD problems
-		if ($level >= 1) {   
+		if ($level >= 1) {
 
 			# IP rule with a port num (WTF?)
 			if ( "$proto" eq "ip" and (("$src_port" ne "any") or ("$dst_port" ne "any"))) {
 				$fail++;
 				push(@reason, "- IP rule with port number (or var that could be set to a port number). This is BAD and invalid syntax. \n  It is likely that this rule head is not functioning as you expect it to.  \n  The IP protocol doesn't have port numbers. \n  If you want to inspect both UDP and TCP traffic on specific ports use two rules, its faster and valid syntax.\n");
-			} 
+			}
 
 			# No revision number
 			#if ( !$rev ) {
@@ -470,13 +470,13 @@ while (my $line=<RULEFILE>) {
 
 			}
 
-			# No SID 
+			# No SID
 			unless ( $hkeywords{'sid'}) {
 				$fail++;
 				push (@reason, "- No SID number! Please add a sid: keyword\n");
 			}
 
-			# No classtype 
+			# No classtype
 			unless ( $hkeywords{'classtype'}) {
 				$fail++;
 				push (@reason, "- No classification specified - Please add a classtype to add correct priority rating\n");
@@ -490,19 +490,19 @@ while (my $line=<RULEFILE>) {
 		}
 
 		# Medium sensitivity level = Medium problems
-		if ($level > 2 ) { 
+		if ($level > 2 ) {
 			# IP rule with flow - move to TCP/UDP
 			if ( ("$proto" eq "ip") and $hkeywords{'flow'} ) {
 				$fail++;
-				push (@reason, "- IP rule with flow?, Considder moving to a TCP or UDP (with stream5) based rule\n");
+				push (@reason, "- IP rule with flow?, Consider moving to a TCP or UDP (with stream5) based rule\n");
 			}
 
 			# No deep packet checks - Firewall suited check
-			if  ( ("$proto" eq "tcp" or "$proto" eq "udp") and not 
+			if  ( ("$proto" eq "tcp" or "$proto" eq "udp") and not
 				($hkeywords{'content'} or $hkeywords{'uricontent'} or $hkeywords{'pcre'} or $hkeywords{'byte_test'} or $hkeywords{'dsize'} or $hkeywords{'flags'}) ) {
 				$fail++;
 				$blacklistable=1;
-				push (@reason, "- TCP/UDP rule with no deep packet checks? This rule looks more suited to a firewall or blacklist\n"); 
+				push (@reason, "- TCP/UDP rule with no deep packet checks? This rule looks more suited to a firewall or blacklist\n");
 			}
 
 			# IP rule without content, pcre or uricontent?
@@ -525,7 +525,7 @@ while (my $line=<RULEFILE>) {
 			# TCP without flow
 			if ( ("$proto" eq "tcp") and not $hkeywords{'flow'}) {
 				$fail++;
-				push (@reason, "- TCP, without flow. Considder adding flow to provide better state tracking on this TCP based rule\n");
+				push (@reason, "- TCP, without flow. Consider adding flow to provide better state tracking on this TCP based rule\n");
 			}
 		}
 
@@ -536,7 +536,7 @@ while (my $line=<RULEFILE>) {
 				$fail++;
 				push (@reason, "- <ip.addr> ANY -> <ip.addr> ANY rule. \n  You should really add port numbers into your rule. You are likely wasting huge chunks of processing effort on the wrong packets\n");
 			}
-		}	
+		}
 
 		# If this is a blacklist-able rule, and blacklist o/p is enabled, lets track these for use in a snort.conf
 		if ( $blacklist and $blacklistable ) {
@@ -586,9 +586,9 @@ while (my $line=<RULEFILE>) {
 				}
 			}
 		} else { # WIN!
-			print OUTPUT "$originalline\n";	
+			print OUTPUT "$originalline\n";
 		}
-	} 
+	}
 }
 
 if ($write) {
@@ -602,7 +602,7 @@ if ($blacklist) {
 	print BLACKLIST "# Autogenerated blacklist by DumbPig from $rulefile \n# Contact leon.ward\@sourcefire.com \n# For more information about dumbPig visit http://rm-rf.co.uk\n ";
 	foreach (@blackArray) {
 		print BLACKLIST "$_ \n";
-	}	
+	}
 	print "....Done\n";
 }
 
