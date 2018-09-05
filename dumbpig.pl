@@ -49,6 +49,7 @@ my $blackCIDR="";
 my @blackArray=();
 my $fixnormbug=1; 	# I found a bug in Parse::Snort with whitespace normalization,
 			# this is a quick fix while waiting for patch upstream
+my $chgexitcode=0;
 
 sub convert_bl{
 	# Convert a load of snort rule header format IPs (or CIDR) to the format used by the blacklist patch
@@ -119,6 +120,7 @@ sub usage{
 	print "	    -v or --verbose	Verbose output for debugging\n";
 	print "	    -c or --censor	Censor rules in the output, in case you dont trust everyone\n";
 	print "	    -f or --forcefail	Force good rules to FAIL. Allows output of all rules\n";
+	print "     -e or --error       Use nonzero return code if bad rules are found\n"; 
 	exit 1;
 }
 
@@ -132,6 +134,7 @@ GetOptions (    'b|blacklist=s' => \$blacklist,
 		'f|forcefail' => \$forcefail,
 		'c|censor' => \$censor,
 		'q|quiet' => \$q,
+		'e|error' => \$chgexitcode,
 );
 
 unless ( $q ) {
@@ -619,3 +622,4 @@ if ($blacklist) {
 print "--------------------------------------\n";
 print "Total: $failnum fails over $rulecount rules ($linenum lines) in $rulefile\n";
 print "- Contact leon.ward\@sourcefire.com\n";
+exit $failnum if $chgexitcode;
